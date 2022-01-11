@@ -1,0 +1,126 @@
+<!-- HTML -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+    <!-- JS -->
+    <script>
+
+        function getStringFromWasm0(ptr, len) {
+            return cachedTextDecoder.decode(getUint8Memory0().subarray(ptr, ptr + len));
+        }
+        
+        // ========== Uint8Array Helper ==========
+        //
+        // Convert base16 to base10 bytes
+        // eg. "9971e8" => ['99','71','e8'] => [153,113,232]
+        // @returns { Uint8Array } 
+        //
+        const base16toUint8array = (str) => {
+            const publicKey_segmented = str.match(/.{1,2}/g);
+            const publicKey_base10 = publicKey_segmented.map((segment, i) => {
+                const powers = [16, 1]; // power of 16 for the length of 2. Otherwise, [etc, .., 4096,256,16,1] 
+                const base16_hex_table = "0123456789abcdef"; // where its index indicates its decimal
+                const two_bits = segment.split(''); // ['12'] => ['1', '2']
+
+                const base10_result = two_bits.map((hex, i) => {
+                    const decimal = base16_hex_table.indexOf(hex);
+                    const sum_of_power = powers[i] * decimal;
+                    return sum_of_power;
+                });
+
+                const base10 = base10_result.reduce((a, b) => a + b);
+
+                return base10;
+            });
+
+            return new Uint8Array(publicKey_base10);
+
+        };
+
+        //
+        // Convert base64url to uint8Array
+        // @returns { Uint8Array } 
+        //
+        const base64urlToUint8array = (str) => {
+            const base64 = atob(str.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, ''));
+            const str_arr = base64.split('');
+            const utf16_code = (str) => str.charCodeAt(0);
+            return new Uint8Array(str_arr.map((char) => utf16_code(char)));
+        };
+
+        //
+        // Convert string into bytes
+        // eg. "123456" => [49,50,51,52,53]
+        // @returns { Unit8Array } 
+        //
+        const stringToUint8Array = (str) => new Uint8Array(str.split('').map((char, i) => str.charCodeAt(i)));        
+
+        // --- mounted ---
+        (async () => {
+
+            console.log("--- Mounted ---");
+
+            // -- prepare parameters (from this function)
+            const publicKey = '9971e835a1fe1a4d78e381eebbe0ddc84fde5119169db816900de796d10187f3c53d65c1202ac083d099a517f34a9b62';
+            const jwt = "eyJhbGciOiJCTFMxMi0zODEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJMSVQiLCJzdWIiOiIweGRiZDM2MGYzMDA5N2ZiNmQ5MzhkY2M4YjdiNjI4NTRiMzYxNjBiNDUiLCJjaGFpbiI6ImZhbnRvbSIsImlhdCI6MTYyODAzMTM1OCwiZXhwIjoxNjI4MDc0NTU4LCJiYXNlVXJsIjoiaHR0cHM6Ly9teS1keW5hbWljLWNvbnRlbnQtc2VydmVyLmNvbSIsInBhdGgiOiIvYV9wYXRoLmh0bWwiLCJvcmdJZCI6IiJ9.lX_aBSgGVYWd2FL6elRHoPJ2nab0IkmmX600cwZPCyK_SazZ-pzBUGDDQ0clthPVAtoS7roHg14xpEJlcSJUZBA7VTlPiDCOrkie_Hmulj765qS44t3kxAYduLhNQ-VN";
+
+            // -- prepare JWT
+            const jwtAnatomy = jwt.split('.');
+            const jwtHeader = jwtAnatomy[0]; 
+            const jwtPayload = jwtAnatomy[1]; 
+            const jwtSignature = jwtAnatomy[2];
+            const message = jwtHeader + '.' + jwtPayload;
+        
+            // -- prepare arguments in the correct formats
+            const publicKey_uint8Array = base16toUint8array(publicKey);
+            const signature_uint8Array = base64urlToUint8array(jwtSignature);
+            const message_uint8Array = stringToUint8Array(message);
+
+            console.log("publicKey_uint8Array: ", publicKey_uint8Array);
+            console.log("signature_uint8Array: ", signature_uint8Array);
+            console.log("message_uint8Array: ", message_uint8Array);
+            
+            // -- prepare wasm
+            const imports = {};
+            imports.wbg = {};
+            imports.wbg.__wbindgen_throw = function(arg0, arg1) {
+                throw new Error(getStringFromWasm0(arg0, arg1));
+            };
+            
+            const input = await fetch('./threshold_crypto_ui.wasm');
+            const bits = await input.arrayBuffer();
+            const instance = await WebAssembly.instantiate(bits, imports);
+            const _wasm = instance.instance.exports;
+
+            // -- set bytes for each argument
+            // -- set public key bytes
+            publicKey_uint8Array.forEach((byte, i) => {
+                _wasm.set_pk_byte(i, byte);
+            });
+            // -- set signature bytes
+            signature_uint8Array.forEach((byte, i) => {
+                _wasm.set_sig_byte(i, byte);
+            });
+            // -- set message bytes
+            message_uint8Array.forEach((byte, i) => {
+                _wasm.set_msg_byte(i, byte);
+            });
+            
+            // -- check if message is verified
+            const verified = _wasm.verify(message_uint8Array.length);
+
+            console.log("Verified:", verified);
+
+            
+            // -- execute
+        })();
+    </script>
+</body>
+</html>
