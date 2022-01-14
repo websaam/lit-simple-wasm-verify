@@ -20,10 +20,11 @@
         //
         // Convert base16 to base10 bytes
         // eg. "9971e8" => ['99','71','e8'] => [153,113,232]
+        // @param { String } str
         // @returns { Uint8Array } 
         //
         const base16toUint8array = (str) => {
-            const publicKey_segmented = str.match(/.{1,2}/g);
+            const publicKey_segmented = str.match(/.{1,2}/g); // ==> "9971e8" => ['99','71','e8']
             const publicKey_base10 = publicKey_segmented.map((segment, i) => {
                 const powers = [16, 1]; // power of 16 for the length of 2. Otherwise, [etc, .., 4096,256,16,1] 
                 const base16_hex_table = "0123456789abcdef"; // where its index indicates its decimal
@@ -46,6 +47,7 @@
 
         //
         // Convert base64url to uint8Array
+        // @param { String } str
         // @returns { Uint8Array } 
         //
         const base64urlToUint8array = (str) => {
@@ -58,6 +60,7 @@
         //
         // Convert string into bytes
         // eg. "123456" => [49,50,51,52,53]
+        // @param { String } str
         // @returns { Unit8Array } 
         //
         const stringToUint8Array = (str) => new Uint8Array(str.split('').map((char, i) => str.charCodeAt(i)));        
@@ -67,7 +70,7 @@
 
             console.log("--- Mounted ---");
 
-            // -- prepare parameters (from this function)
+            // -- prepare parameters (Lit Public key & a test JWT token)
             const publicKey = '9971e835a1fe1a4d78e381eebbe0ddc84fde5119169db816900de796d10187f3c53d65c1202ac083d099a517f34a9b62';
             const jwt = "eyJhbGciOiJCTFMxMi0zODEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJMSVQiLCJzdWIiOiIweGRiZDM2MGYzMDA5N2ZiNmQ5MzhkY2M4YjdiNjI4NTRiMzYxNjBiNDUiLCJjaGFpbiI6ImZhbnRvbSIsImlhdCI6MTYyODAzMTM1OCwiZXhwIjoxNjI4MDc0NTU4LCJiYXNlVXJsIjoiaHR0cHM6Ly9teS1keW5hbWljLWNvbnRlbnQtc2VydmVyLmNvbSIsInBhdGgiOiIvYV9wYXRoLmh0bWwiLCJvcmdJZCI6IiJ9.lX_aBSgGVYWd2FL6elRHoPJ2nab0IkmmX600cwZPCyK_SazZ-pzBUGDDQ0clthPVAtoS7roHg14xpEJlcSJUZBA7VTlPiDCOrkie_Hmulj765qS44t3kxAYduLhNQ-VN";
 
